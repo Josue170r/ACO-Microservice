@@ -1,14 +1,29 @@
 using Microsoft.Azure.Functions.Worker;
-using Microsoft.Azure.Functions.Worker.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using ACO_Microservice.Services;
+using ACO_Microservice.Configuration;
 
-var builder = FunctionsApplication.CreateBuilder(args);
+var host = new HostBuilder()
+    .ConfigureFunctionsWebApplication()
+    .ConfigureServices(services =>
+    {
+        services.AddApplicationInsightsTelemetryWorkerService();
+        services.ConfigureFunctionsApplicationInsights();
 
-builder.ConfigureFunctionsWebApplication();
+        services.AddSingleton<IServiceConfiguration, ServiceConfiguration>();
 
-builder.Services
-    .AddApplicationInsightsTelemetryWorkerService()
-    .ConfigureFunctionsApplicationInsights();
+        services.AddHttpClient<IPlaceService, PlaceService>((serviceProvider, client) =>
+        {
+            var config = serviceProvider.GetRequiredService<IServiceConfiguration>();
+            var baseUrl = config.ApiHost.TrimEnd('/');
+            client.BaseAddress = new Uri($"{baseUrl}/api");
+            client.DefaultRequestHeaders.Add("Accept", "application/json");
+        });
 
-builder.Build().Run();
+        services.AddScoped<IAntColonyService, AntColonyService>();
+        services.AddScoped<IItineraryService, ItineraryService>();
+    })
+    .Build();
+
+host.Run();
