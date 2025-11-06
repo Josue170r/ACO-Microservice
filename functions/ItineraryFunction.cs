@@ -23,13 +23,25 @@ namespace ACO_Microservice.Functions
 
         [Function("GenerateItinerary")]
         public async Task<IActionResult> GenerateItinerary(
-            [HttpTrigger(AuthorizationLevel.Function, "post", Route = "itinerary/generate")] HttpRequest req)
+            [HttpTrigger(AuthorizationLevel.Function, "post", "options", Route = "itinerary/generate")] HttpRequest req)
         {
+            if (req.Method == "OPTIONS")
+            {
+                req.HttpContext.Response.Headers.Append("Access-Control-Allow-Origin", "*");
+                req.HttpContext.Response.Headers.Append("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+                req.HttpContext.Response.Headers.Append("Access-Control-Allow-Headers", "Content-Type, Authorization");
+                req.HttpContext.Response.Headers.Append("Access-Control-Max-Age", "3600");
+                return new OkResult();
+            }
+
             try
             {
+                req.HttpContext.Response.Headers.Append("Access-Control-Allow-Origin", "*");
+                req.HttpContext.Response.Headers.Append("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+                req.HttpContext.Response.Headers.Append("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
                 _logger.LogInformation("GenerateItinerary function triggered");
 
-                // Extract Bearer token from headers
                 string? bearerToken = null;
                 if (req.Headers.TryGetValue("Authorization", out var authHeader) &&
                     authHeader.ToString().StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
@@ -44,7 +56,6 @@ namespace ACO_Microservice.Functions
                     return new UnauthorizedResult();
                 }
 
-                // Parse request body
                 string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
                 var request = JsonSerializer.Deserialize<NewItineraryRequest>(requestBody, new JsonSerializerOptions
                 {
@@ -56,10 +67,8 @@ namespace ACO_Microservice.Functions
                     return new BadRequestObjectResult(new { error = "Invalid request body" });
                 }
 
-                // Generate itinerary
                 var itinerary = await _itineraryService.GenerateItineraryAsync(request, bearerToken);
 
-                // Save itinerary to backend
                 var saved = await _placeService.SaveItineraryAsync(itinerary, bearerToken);
 
                 if (!saved)
@@ -100,8 +109,19 @@ namespace ACO_Microservice.Functions
 
         [Function("HealthCheck")]
         public IActionResult HealthCheck(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "health")] HttpRequest req)
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get", "options", Route = "health")] HttpRequest req)
         {
+            if (req.Method == "OPTIONS")
+            {
+                req.HttpContext.Response.Headers.Append("Access-Control-Allow-Origin", "*");
+                req.HttpContext.Response.Headers.Append("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+                req.HttpContext.Response.Headers.Append("Access-Control-Allow-Headers", "Content-Type, Authorization");
+                req.HttpContext.Response.Headers.Append("Access-Control-Max-Age", "3600");
+                return new OkResult();
+            }
+
+            req.HttpContext.Response.Headers.Append("Access-Control-Allow-Origin", "*");
+
             return new OkObjectResult(new
             {
                 status = "Healthy",
