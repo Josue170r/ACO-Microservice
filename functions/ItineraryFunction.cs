@@ -23,14 +23,16 @@ namespace ACO_Microservice.Functions
 
         [Function("GenerateItinerary")]
         public async Task<IActionResult> GenerateItinerary(
-            [HttpTrigger(AuthorizationLevel.Function, "post", "options", Route = "itinerary/generate")] HttpRequest req)
+            [HttpTrigger(AuthorizationLevel.Anonymous, "post", "options", Route = "itinerary/generate")] HttpRequest req)
         {
+
+            req.HttpContext.Response.Headers.Append("Access-Control-Allow-Origin", "*");
+            req.HttpContext.Response.Headers.Append("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+            req.HttpContext.Response.Headers.Append("Access-Control-Allow-Headers", "Content-Type, Authorization");
+            req.HttpContext.Response.Headers.Append("Access-Control-Max-Age", "3600");
+
             if (req.Method == "OPTIONS")
             {
-                req.HttpContext.Response.Headers.Append("Access-Control-Allow-Origin", "*");
-                req.HttpContext.Response.Headers.Append("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-                req.HttpContext.Response.Headers.Append("Access-Control-Allow-Headers", "Content-Type, Authorization");
-                req.HttpContext.Response.Headers.Append("Access-Control-Max-Age", "3600");
                 return new OkResult();
             }
 
