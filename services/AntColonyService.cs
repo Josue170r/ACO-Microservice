@@ -39,7 +39,7 @@ namespace ACO_Microservice.Services
         };
 
         private double[,] pheromones = default!;
-        private double[,] distances  = default!;
+        private double[,] distances = default!;
         private Random random = new Random();
 
         public SaveItineraryRequest OptimizeItinerary(
@@ -133,13 +133,13 @@ namespace ACO_Microservice.Services
         private List<List<int>> BuildSolution(List<PlaceData> places, int totalDays)
         {
             var solution = new List<List<int>>();
-            var visited = new HashSet<int> { 0 }; // Start from hotel (index 0)
-            var placesPerDay = Math.Min(4, places.Count / totalDays); // Max 4 places per day
+            var visited = new HashSet<int> { 0 };
+            var placesPerDay = Math.Min(4, Math.Max(2, places.Count / totalDays));
 
             for (int day = 0; day < totalDays; day++)
             {
                 var dayPlan = new List<int>();
-                int currentPlace = 0; // Start from hotel
+                int currentPlace = 0;
                 double currentTime = START_HOUR;
 
                 while (currentTime < END_HOUR - 2 && dayPlan.Count < placesPerDay)
@@ -147,18 +147,19 @@ namespace ACO_Microservice.Services
                     int nextPlace = SelectNextPlace(currentPlace, visited, places);
                     if (nextPlace == -1) break;
 
+                    if (visited.Contains(nextPlace))
+                    {
+                        continue;
+                    }
+
                     dayPlan.Add(nextPlace);
                     visited.Add(nextPlace);
-                    
-                    // Add duration
+
                     var placeType = places[nextPlace].PlaceTypes.FirstOrDefault() ?? "tourist_attraction";
                     currentTime += DurationByType.GetValueOrDefault(placeType, 2.0);
-                    
-                    // Add travel time (approx 30 min)
                     currentTime += 0.5;
-                    
-                    // Lunch break
-                    if (currentTime >= LUNCH_START && currentTime <= LUNCH_END)
+
+                    if (currentTime >= LUNCH_START && currentTime < LUNCH_END)
                     {
                         currentTime = LUNCH_END + 0.5;
                     }
@@ -166,9 +167,11 @@ namespace ACO_Microservice.Services
                     currentPlace = nextPlace;
                 }
 
-                solution.Add(dayPlan);
+                if (dayPlan.Any())
+                {
+                    solution.Add(dayPlan);
+                }
             }
-
             return solution;
         }
 
@@ -183,13 +186,13 @@ namespace ACO_Microservice.Services
                 {
                     double pheromone = Math.Pow(pheromones[currentPlace, i], ALPHA);
                     double heuristic = Math.Pow(1.0 / distances[currentPlace, i], BETA);
-                    
+
                     // Include sustainability as part of heuristic
                     heuristic *= (1 + places[i].SustainabilityIndex);
-                    
+
                     // Include rating as part of heuristic
                     heuristic *= (1 + places[i].Rating / 5.0);
-                    
+
                     double probability = pheromone * heuristic;
                     probabilities.Add((i, probability));
                     totalProbability += probability;
@@ -223,14 +226,14 @@ namespace ACO_Microservice.Services
                 // Evaluate distance
                 double dayDistance = 0;
                 int prevPlace = 0; // Hotel
-                
+
                 foreach (int placeIndex in day)
                 {
                     dayDistance += distances[prevPlace, placeIndex];
                     prevPlace = placeIndex;
                 }
                 dayDistance += distances[prevPlace, 0]; // Return to hotel
-                
+
                 // Penalize long distances
                 fitness -= dayDistance * 0.1;
 
@@ -263,7 +266,7 @@ namespace ACO_Microservice.Services
             foreach (var (solution, fitness) in solutions)
             {
                 double deposit = Q * fitness;
-                
+
                 foreach (var day in solution)
                 {
                     int prevPlace = 0;

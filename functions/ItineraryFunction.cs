@@ -25,7 +25,6 @@ namespace ACO_Microservice.Functions
         public async Task<IActionResult> GenerateItinerary(
             [HttpTrigger(AuthorizationLevel.Anonymous, "post", "options", Route = "itinerary/generate")] HttpRequest req)
         {
-
             req.HttpContext.Response.Headers.Append("Access-Control-Allow-Origin", "*");
             req.HttpContext.Response.Headers.Append("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
             req.HttpContext.Response.Headers.Append("Access-Control-Allow-Headers", "Content-Type, Authorization");
@@ -38,11 +37,7 @@ namespace ACO_Microservice.Functions
 
             try
             {
-                req.HttpContext.Response.Headers.Append("Access-Control-Allow-Origin", "*");
-                req.HttpContext.Response.Headers.Append("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-                req.HttpContext.Response.Headers.Append("Access-Control-Allow-Headers", "Content-Type, Authorization");
-
-                _logger.LogInformation("GenerateItinerary function triggered");
+                _logger.LogInformation("Función GenerateItinerary iniciada");
 
                 string? bearerToken = null;
                 if (req.Headers.TryGetValue("Authorization", out var authHeader) &&
@@ -54,7 +49,7 @@ namespace ACO_Microservice.Functions
                 if (string.IsNullOrEmpty(bearerToken))
                 {
                     req.HttpContext.Response.Headers.Append("WWW-Authenticate",
-                        "Bearer realm=\"api\", error=\"invalid_token\", error_description=\"Bearer token required\"");
+                        "Bearer realm=\"api\", error=\"invalid_token\", error_description=\"Token de autorización requerido\"");
                     return new UnauthorizedResult();
                 }
 
@@ -66,7 +61,7 @@ namespace ACO_Microservice.Functions
 
                 if (request == null)
                 {
-                    return new BadRequestObjectResult(new { error = "Invalid request body" });
+                    return new BadRequestObjectResult(new { error = "Cuerpo de solicitud inválido" });
                 }
 
                 var itinerary = await _itineraryService.GenerateItineraryAsync(request, bearerToken);
@@ -75,20 +70,20 @@ namespace ACO_Microservice.Functions
 
                 if (!saved)
                 {
-                    _logger.LogWarning("Failed to save itinerary to backend");
+                    _logger.LogWarning("No se pudo guardar el itinerario en el backend");
                 }
 
                 return new OkObjectResult(new
                 {
                     status = 200,
-                    message = "Itinerary generated successfully",
+                    message = "Itinerario generado exitosamente",
                     data = itinerary,
                     saved
                 });
             }
             catch (InvalidOperationException ex)
             {
-                _logger.LogError(ex, "Business logic error");
+                _logger.LogError(ex, "Error de lógica de negocio");
                 return new BadRequestObjectResult(new
                 {
                     status = 400,
@@ -97,11 +92,11 @@ namespace ACO_Microservice.Functions
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Unexpected error generating itinerary");
+                _logger.LogError(ex, "Error inesperado al generar itinerario");
                 return new ObjectResult(new
                 {
                     status = 500,
-                    error = "Internal server error"
+                    error = "Error interno del servidor"
                 })
                 {
                     StatusCode = 500
@@ -126,7 +121,7 @@ namespace ACO_Microservice.Functions
 
             return new OkObjectResult(new
             {
-                status = "Healthy",
+                status = "Saludable",
                 service = "ACO_Microservice",
                 timestamp = DateTime.UtcNow
             });
